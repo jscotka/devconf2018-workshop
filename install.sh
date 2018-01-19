@@ -7,6 +7,8 @@ I_HAPROXY="modularitycontainers/haproxy"
 I_TESTTOOLS="container-test-tools"
 IMAGES="$I_FEDORA $I_MEMCACHED $I_DOVECOT $I_HAPROXY"
 
+PACKAGES="meta-test-family conu"
+
 BASE="build"
 BUILDDIR="$BASE/images"
 RPMS="$BASE/rpms"
@@ -47,11 +49,16 @@ function download_gits(){
     curl -o $BASE/conu.zip https://codeload.github.com/fedora-modularity/conu/zip/master
 }
 
-function download_rpms(){
+function download_rpms_locally(){
     mkdir -p $RPMS
-    wget -r -np https://copr-be.cloud.fedoraproject.org/results/phracek/meta-test-family-devel/
-    find copr-be.cloud.fedoraproject.org -name "*.rpm" -exec cp {} $RPMS \;
-    createrepo -o $RPMS $RPMS
+    FEDORAS="25 26 27 rawhide"
+    for VERS in $FEDORAS; do
+        mkdir -p $RPMS/fedora$VERS
+        INTDIR=`readlink -e $RPMS/fedora$VERS`
+
+        sudo dnf install --installroot=$INTDIR --releasever=$VERS \
+         --nogpgcheck --downloadonly --downloaddir=$INTDIR $PACKAGES
+    done
 }
 
 
@@ -65,7 +72,7 @@ function bootstrap(){
 function install_packages(){
     sudo dnf -y install dnf-plugins-core
     sudo dnf -y copr enable phracek/meta-test-family-devel
-    sudo dnf -y install meta-test-family conu
+    sudo dnf -y install $PACKAGES
 
 }
 function install_gits(){
